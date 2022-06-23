@@ -1,45 +1,54 @@
-// [2] Import icons with parcel
+// Import icons with parcel
 import 'core-js/stable';
-import { receiveMessageOnPort } from 'worker_threads';
 import * as model from './model.js';
 import recipeView from './views/recipeView.js';
+import searchView from './views/searchView.js';
+import resultsView from './views/resultsView.js';
 
-// console.log(icons);
-
-const recipeContainer = document.querySelector('.recipe');
-
-// https://forkify-api.herokuapp.com/v2
-
-///////////////////////////////////////
-
-// [1] - get recipe details from the API and change properties naming
+if (module.hot) {
+  module.hot.accept();
+}
 
 const controlRecipes = async function () {
   try {
-    // [5] get recipe hash from the HTML
+    // Get recipe hash from the HTML
     const id = window.location.hash.slice(1);
-    console.log(id);
 
     if (!id) return;
     recipeView.renderSpinner();
 
-    // [1.1] Loading recipe
+    // Loading recipe
     await model.loadRecipe(id);
 
-    // [1.2] Rendering recipe
+    // Rendering recipe
     recipeView.render(model.state.recipe);
   } catch (err) {
     recipeView.renderError();
   }
 };
 
-// controlRecipes();
+const controlSearchResults = async function () {
+  try {
+    resultsView.renderSpinner();
+    console.log(resultsView);
+    // 1. Get search query
+    const query = searchView.getQuery();
+    if (!query) return;
 
-// window.addEventListener('hashchange', controlRecipes);
-// window.addEventListener('load', controlRecipes);
+    // 2. Load search results
+    await model.loadSearchResult(query);
+
+    // 3. Render results
+    console.log(model.state.search.results);
+    resultsView.render(model.state.search.results);
+  } catch (err) {
+    console.log(err);
+  }
+};
 
 const init = function () {
   recipeView.addHandlerRender(controlRecipes);
+  searchView.addHandlerSearch(controlSearchResults);
 };
 
 init();
