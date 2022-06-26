@@ -543,8 +543,13 @@ var _searchViewJs = require("./views/searchView.js");
 var _searchViewJsDefault = parcelHelpers.interopDefault(_searchViewJs);
 var _resultsViewJs = require("./views/resultsView.js");
 var _resultsViewJsDefault = parcelHelpers.interopDefault(_resultsViewJs);
+var _bookmarksViewJs = require("./views/bookmarksView.js");
+var _bookmarksViewJsDefault = parcelHelpers.interopDefault(_bookmarksViewJs);
 var _paginationViewJs = require("./views/paginationView.js");
 var _paginationViewJsDefault = parcelHelpers.interopDefault(_paginationViewJs);
+var _addRecipeViewJs = require("./views/addRecipeView.js");
+var _addRecipeViewJsDefault = parcelHelpers.interopDefault(_addRecipeViewJs);
+var _configJs = require("./config.js");
 // if (module.hot) {
 //   module.hot.accept();
 // }
@@ -554,6 +559,10 @@ const controlRecipes = async function() {
         const id = window.location.hash.slice(1);
         if (!id) return;
         (0, _recipeViewJsDefault.default).renderSpinner();
+        // Update results view to mark selected search result
+        (0, _resultsViewJsDefault.default).update(_modelJs.getSearchResultsPage());
+        // Update bookmarks view
+        (0, _bookmarksViewJsDefault.default).update(_modelJs.state.bookmarks);
         // Loading recipe
         await _modelJs.loadRecipe(id);
         // Rendering recipe
@@ -565,7 +574,6 @@ const controlRecipes = async function() {
 const controlSearchResults = async function() {
     try {
         (0, _resultsViewJsDefault.default).renderSpinner();
-        console.log((0, _resultsViewJsDefault.default));
         // 1. Get search query
         const query = (0, _searchViewJsDefault.default).getQuery();
         if (!query) return;
@@ -581,21 +589,69 @@ const controlSearchResults = async function() {
 };
 const controlPagination = function(goToPage) {
     (0, _resultsViewJsDefault.default).renderSpinner();
-    console.log((0, _resultsViewJsDefault.default));
+    // console.log(resultsView);
     // Render results
-    console.log(_modelJs.state);
+    // console.log(model.state);
     (0, _resultsViewJsDefault.default).render(_modelJs.getSearchResultsPage(goToPage));
     // Render pagination buttons
     (0, _paginationViewJsDefault.default).render(_modelJs.state.search);
 };
+const controlServings = function(newServings) {
+    // Update recipe servings in state object
+    _modelJs.updateServings(newServings);
+    // Update the recipe view
+    // recipeView.render(model.state.recipe);
+    (0, _recipeViewJsDefault.default).update(_modelJs.state.recipe);
+};
+const controlAddBookmark = function() {
+    // Add/remove bookmark
+    if (!_modelJs.state.recipe.bookmarked) _modelJs.addBookmark(_modelJs.state.recipe);
+    else if (_modelJs.state.recipe.bookmarked) _modelJs.deleteBookmark(_modelJs.state.recipe.id);
+    // Update recipe view
+    (0, _recipeViewJsDefault.default).update(_modelJs.state.recipe);
+    // Render bookmarks
+    (0, _bookmarksViewJsDefault.default).render(_modelJs.state.bookmarks);
+};
+const controlBookmarks = function() {
+    (0, _bookmarksViewJsDefault.default).render(_modelJs.state.bookmarks);
+};
+const controlAddRecipe = async function(newRecipe) {
+    try {
+        // Show loading spinner
+        (0, _addRecipeViewJsDefault.default).renderSpinner();
+        await _modelJs.uploadRecipe(newRecipe);
+        // Render recipe
+        (0, _recipeViewJsDefault.default).render(_modelJs.state.recipe);
+        // Success message
+        (0, _addRecipeViewJsDefault.default).renderMessage();
+        // Render bookmark
+        (0, _bookmarksViewJsDefault.default).render(_modelJs.state.bookmarks);
+        // Change ID in URL
+        window.history.pushState(null, "", `#${_modelJs.state.recipe.id}`);
+        // window.history.back();
+        // Close form window
+        setTimeout(function() {
+            (0, _addRecipeViewJsDefault.default).toggleWindow();
+            (0, _addRecipeViewJsDefault.default).generateMarkup();
+        }, (0, _configJs.MODAL_CLOSE_SEC) * 1000);
+    } catch (err) {
+        console.log("\uD83D\uDCA5" + err);
+        (0, _addRecipeViewJsDefault.default).renderError(err.message);
+    }
+    location.reload();
+};
 const init = function() {
+    (0, _bookmarksViewJsDefault.default).addHandlerRender(controlBookmarks);
     (0, _recipeViewJsDefault.default).addHandlerRender(controlRecipes);
+    (0, _recipeViewJsDefault.default).addHandlerUpdateServings(controlServings);
+    (0, _recipeViewJsDefault.default).addHandlerAddBookmark(controlAddBookmark);
     (0, _searchViewJsDefault.default).addHandlerSearch(controlSearchResults);
     (0, _paginationViewJsDefault.default).addHandlerClick(controlPagination);
+    (0, _addRecipeViewJsDefault.default).addHandlerUpload(controlAddRecipe);
 };
 init();
 
-},{"core-js/modules/es.array.includes.js":"dkJzX","core-js/modules/web.immediate.js":"49tUX","./model.js":"Y4A21","./views/recipeView.js":"l60JC","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./views/searchView.js":"9OQAM","./views/resultsView.js":"cSbZE","./views/paginationView.js":"6z7bi"}],"dkJzX":[function(require,module,exports) {
+},{"core-js/modules/es.array.includes.js":"dkJzX","core-js/modules/web.immediate.js":"49tUX","./model.js":"Y4A21","./views/recipeView.js":"l60JC","./views/searchView.js":"9OQAM","./views/resultsView.js":"cSbZE","./views/bookmarksView.js":"4Lqzq","./views/paginationView.js":"6z7bi","./views/addRecipeView.js":"i6DNj","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./config.js":"k5Hzs"}],"dkJzX":[function(require,module,exports) {
 "use strict";
 var $ = require("../internals/export");
 var $includes = require("../internals/array-includes").includes;
@@ -1837,6 +1893,10 @@ parcelHelpers.export(exports, "state", ()=>state);
 parcelHelpers.export(exports, "loadRecipe", ()=>loadRecipe);
 parcelHelpers.export(exports, "loadSearchResult", ()=>loadSearchResult);
 parcelHelpers.export(exports, "getSearchResultsPage", ()=>getSearchResultsPage);
+parcelHelpers.export(exports, "updateServings", ()=>updateServings);
+parcelHelpers.export(exports, "addBookmark", ()=>addBookmark);
+parcelHelpers.export(exports, "deleteBookmark", ()=>deleteBookmark);
+parcelHelpers.export(exports, "uploadRecipe", ()=>uploadRecipe);
 var _config = require("./config");
 var _helpers = require("./helpers");
 const state = {
@@ -1846,22 +1906,31 @@ const state = {
         results: [],
         resultsPerPage: (0, _config.RESULS_PER_PAGE),
         page: 1
-    }
+    },
+    bookmarks: []
+};
+const createRecipeObject = function(data) {
+    const { recipe  } = data.data;
+    return {
+        id: recipe.id,
+        title: recipe.title,
+        publisher: recipe.publisher,
+        sourceUrl: recipe.source_url,
+        image: recipe.image_url,
+        servings: recipe.servings,
+        cookingTime: recipe.cooking_time,
+        ingredients: recipe.ingredients,
+        ...recipe.key && {
+            key: recipe.key
+        }
+    };
 };
 const loadRecipe = async function(id) {
     try {
-        const data = await (0, _helpers.getJson)(`${(0, _config.API_URL)}${id}`);
-        const { recipe  } = data.data;
-        state.recipe = {
-            id: recipe.id,
-            title: recipe.title,
-            publisher: recipe.publisher,
-            sourceUrl: recipe.source_url,
-            image: recipe.image_url,
-            servings: recipe.serving,
-            cookingTime: recipe.cooking_time,
-            ingredients: recipe.ingredients
-        };
+        const data = await (0, _helpers.AJAX)(`${(0, _config.API_URL)}${id}?key=${(0, _config.KEY)}`);
+        state.recipe = createRecipeObject(data);
+        if (state.bookmarks.some((bookmark)=>bookmark.id === id)) state.recipe.bookmarked = true;
+        else state.recipe.bookmarked = false;
     } catch (err) {
         console.log(`${err} 💥💥💥`);
         throw err;
@@ -1869,7 +1938,7 @@ const loadRecipe = async function(id) {
 };
 const loadSearchResult = async function(query) {
     try {
-        const data = await (0, _helpers.getJson)(`${(0, _config.API_URL)}?search=${query}`);
+        const data = await (0, _helpers.AJAX)(`${(0, _config.API_URL)}?search=${query}&key=${(0, _config.KEY)}`);
         state.search.query = query;
         state.search.results = data.data.recipes.map((recipe)=>{
             return {
@@ -1879,6 +1948,7 @@ const loadSearchResult = async function(query) {
                 image: recipe.image_url
             };
         });
+        state.search.page = 1;
     } catch (err) {
         console.log(`${err} 💥💥💥`);
         throw err;
@@ -1890,6 +1960,67 @@ const getSearchResultsPage = function(page = state.search.page) {
     const end = page * state.search.resultsPerPage; // 9
     return state.search.results.slice(start, end);
 };
+const updateServings = function(newServings) {
+    state.recipe.ingredients.forEach((ing)=>ing.quantity = ing.quantity * newServings / state.recipe.servings);
+    state.recipe.servings = newServings;
+};
+const persistBookmarks = function() {
+    localStorage.setItem("bookmarks", JSON.stringify(state.bookmarks));
+};
+const addBookmark = function(recipe) {
+    // Add bookmark
+    state.bookmarks.push(recipe);
+    // Mark current recipe as bookmark
+    if (recipe.id === state.recipe.id) state.recipe.bookmarked = true;
+    persistBookmarks();
+};
+const deleteBookmark = function(id) {
+    // Delete bookmark
+    const index = state.bookmarks.findIndex((el)=>el.id === id);
+    state.bookmarks.splice(index, 1);
+    // Mark current recipe as not bookmarked
+    if (id === state.recipe.id) state.recipe.bookmarked = false;
+    persistBookmarks();
+};
+const init = function() {
+    const storage = localStorage.getItem("bookmarks");
+    if (storage) state.bookmarks = JSON.parse(storage);
+};
+init();
+console.log(state.bookmarks);
+const clearBookmarks = function() {
+    localStorage.clear("bookmarks");
+};
+const uploadRecipe = async function(newRecipe) {
+    try {
+        console.log(Object.entries(newRecipe));
+        const ingredients = Object.entries(newRecipe).filter((entry)=>entry[0].startsWith("ingredient") && entry[1] !== "").map((ing)=>{
+            const ingArr = ing[1].replaceAll(" ", "").split(",");
+            if (ingArr.length !== 3) throw new Error("Wrong ingredient format! Please use the correct format :)");
+            const [quantity, unit, description] = ingArr;
+            return {
+                quantity: quantity ? +quantity : null,
+                unit,
+                description
+            };
+        });
+        const recipe = {
+            title: newRecipe.title,
+            source_url: newRecipe.sourceUrl,
+            image_url: newRecipe.image,
+            publisher: newRecipe.publisher,
+            ingredients,
+            cooking_time: +newRecipe.cookingTime,
+            servings: +newRecipe.servings
+        };
+        console.log(recipe);
+        const data = await (0, _helpers.AJAX)(`${(0, _config.API_URL)}?key=${(0, _config.KEY)}`, recipe);
+        state.recipe = createRecipeObject(data);
+        addBookmark(state.recipe);
+    } catch (err) {
+        throw err;
+    }
+};
 
 },{"./config":"k5Hzs","./helpers":"hGI1E","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"k5Hzs":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
@@ -1897,9 +2028,13 @@ parcelHelpers.defineInteropFlag(exports);
 parcelHelpers.export(exports, "API_URL", ()=>API_URL);
 parcelHelpers.export(exports, "TIMEOUT_SEC", ()=>TIMEOUT_SEC);
 parcelHelpers.export(exports, "RESULS_PER_PAGE", ()=>RESULS_PER_PAGE);
+parcelHelpers.export(exports, "KEY", ()=>KEY);
+parcelHelpers.export(exports, "MODAL_CLOSE_SEC", ()=>MODAL_CLOSE_SEC);
 const API_URL = "https://forkify-api.herokuapp.com/api/v2/recipes/";
 const TIMEOUT_SEC = 20;
 const RESULS_PER_PAGE = 10;
+const KEY = "f3355ae4-c7cb-4808-ab7d-a8090072ecc8";
+const MODAL_CLOSE_SEC = 2;
 
 },{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"gkKU3":[function(require,module,exports) {
 exports.interopDefault = function(a) {
@@ -1934,13 +2069,20 @@ exports.export = function(dest, destName, get) {
 },{}],"hGI1E":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
-parcelHelpers.export(exports, "getJson", ()=>getJson);
+parcelHelpers.export(exports, "AJAX", ()=>AJAX);
 parcelHelpers.export(exports, "timeout", ()=>timeout);
 var _config = require("./config");
-const getJson = async function(url) {
+const AJAX = async function(url, uploadData) {
     try {
+        const fetchPro = uploadData ? fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(uploadData)
+        }) : fetch(url);
         const res = await Promise.race([
-            fetch(url),
+            fetchPro,
             timeout((0, _config.TIMEOUT_SEC))
         ]);
         const data = await res.json();
@@ -1956,7 +2098,23 @@ const timeout = function(s) {
             reject(new Error(`Request took too long! Timeout after ${s} second`));
         }, s * 1000);
     });
-};
+}; // export const sendJson = async function (url, uploadData) {
+ //   try {
+ //     const fetchPro = fetch(url, {
+ //       method: 'POST',
+ //       headers: {
+ //         'Content-Type': 'application/json',
+ //       },
+ //       body: JSON.stringify(uploadData),
+ //     });
+ //     const res = await Promise.race([fetchPro, timeout(TIMEOUT_SEC)]);
+ //     const data = await res.json();
+ //     if (!res) throw new Error(`${data.message} (${res.status})`);
+ //     return data;
+ //   } catch (err) {
+ //     throw err;
+ //   }
+ // };
 
 },{"./config":"k5Hzs","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"l60JC":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
@@ -1977,6 +2135,21 @@ class RecipeView extends (0, _viewDefault.default) {
             "hashchange",
             "load"
         ].forEach((event)=>window.addEventListener(event, handler));
+    }
+    addHandlerUpdateServings(handler) {
+        this._parentElement.addEventListener("click", function(e) {
+            const btn = e.target.closest(".btn--increase-servings");
+            if (!btn) return;
+            const { updateTo  } = btn.dataset;
+            if (+updateTo > 0) handler(+updateTo);
+        });
+    }
+    addHandlerAddBookmark(handler) {
+        this._parentElement.addEventListener("click", function(e) {
+            const btn = e.target.closest(".btn--bookmark");
+            if (!btn) return;
+            handler();
+        });
     }
     _generateMarkup() {
         return ` <figure class="recipe__fig">
@@ -2002,12 +2175,12 @@ class RecipeView extends (0, _viewDefault.default) {
       <span class="recipe__info-text">servings</span>
   
       <div class="recipe__info-buttons">
-        <button class="btn--tiny btn--increase-servings">
+        <button class="btn--tiny btn--increase-servings" data-update-to="${this._data.servings - 1}">
           <svg>
             <use href="${0, _iconsSvgDefault.default}#icon-minus-circle"></use>
           </svg>
         </button>
-        <button class="btn--tiny btn--increase-servings">
+        <button class="btn--tiny btn--increase-servings" data-update-to="${this._data.servings + 1}">
           <svg>
             <use href="${0, _iconsSvgDefault.default}#icon-plus-circle"></use>
           </svg>
@@ -2017,9 +2190,9 @@ class RecipeView extends (0, _viewDefault.default) {
   
     <div class="recipe__user-generated">
     </div>
-    <button class="btn--round">
+    <button class="btn--round btn--bookmark" >
       <svg class="">
-        <use href="${0, _iconsSvgDefault.default}#icon-bookmark-fill"></use>
+        <use href="${0, _iconsSvgDefault.default}#icon-bookmark${this._data.bookmarked ? "-fill" : ""}"></use>
       </svg>
     </button>
   </div>
@@ -2069,7 +2242,86 @@ class RecipeView extends (0, _viewDefault.default) {
 }
 exports.default = new RecipeView();
 
-},{"url:../../img/icons.svg":"loVOp","fracty":"hJO4d","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","./View":"5cUXS"}],"loVOp":[function(require,module,exports) {
+},{"./View":"5cUXS","url:../../img/icons.svg":"loVOp","fracty":"hJO4d","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"5cUXS":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+var _iconsSvg = require("url:../../img/icons.svg");
+var _iconsSvgDefault = parcelHelpers.interopDefault(_iconsSvg);
+var _fracty = require("fracty");
+var _fractyDefault = parcelHelpers.interopDefault(_fracty);
+class View {
+    _data;
+    render(data, render = true) {
+        if (!data || Array.isArray(data) && data.length === 0) return this.renderError();
+        this._data = data;
+        const markup = this._generateMarkup();
+        if (!render) return markup;
+        this._clear();
+        this._parentElement.insertAdjacentHTML("afterbegin", markup);
+    }
+    update(data) {
+        this._data = data;
+        const newMarkup = this._generateMarkup();
+        const newDOM = document.createRange().createContextualFragment(newMarkup);
+        const newElements = Array.from(newDOM.querySelectorAll("*"));
+        const curElements = Array.from(this._parentElement.querySelectorAll("*"));
+        newElements.forEach((newEl, i)=>{
+            const curEl = curElements[i];
+            //   console.log(curEl, newEl.isEqualNode(curEl));
+            // Updates changed text
+            if (!newEl.isEqualNode(curEl) && newEl.firstChild?.nodeValue.trim(" ") !== "") {
+                console.log("\uD83D\uDC4B", newEl.firstChild?.nodeValue.trim(" "));
+                curEl.textContent = newEl.textContent;
+            }
+            // Update changed attributes
+            if (!newEl.isEqualNode(curEl)) Array.from(newEl.attributes).forEach((attr)=>curEl.setAttribute(attr.name, attr.value));
+        });
+    }
+    _clear() {
+        this._parentElement.innerHTML = "";
+    }
+    // Add spinner when recipe picture is loading
+    renderSpinner() {
+        const markup = `  
+    <div class="spinner">
+    <svg>
+      <use href="${(0, _iconsSvgDefault.default)}#icon-loader"></use>
+    </svg>
+  </div>
+    `;
+        this._clear();
+        this._parentElement.insertAdjacentHTML("afterbegin", markup);
+    }
+    renderError(message = this._errorMessage) {
+        const markup = `
+    <div class="error">
+    <div>
+      <svg>
+        <use href="${(0, _iconsSvgDefault.default)}#icon-alert-triangle"></use>
+      </svg>
+    </div>
+    <p>${message}</p>
+  </div>`;
+        this._clear();
+        this._parentElement.insertAdjacentHTML("afterbegin", markup);
+    }
+    renderMessage(message = this._message) {
+        const markup = `
+    <div class="message">
+    <div>
+      <svg>
+        <use href="${(0, _iconsSvgDefault.default)}#icon-smile"></use>
+      </svg>
+    </div>
+    <p>${message}</p>
+  </div>`;
+        this._clear();
+        this._parentElement.insertAdjacentHTML("afterbegin", markup);
+    }
+}
+exports.default = View;
+
+},{"url:../../img/icons.svg":"loVOp","fracty":"hJO4d","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"loVOp":[function(require,module,exports) {
 module.exports = require("./helpers/bundle-url").getBundleURL("hWUTQ") + "icons.dfd7a6db.svg" + "?" + Date.now();
 
 },{"./helpers/bundle-url":"lgJ39"}],"lgJ39":[function(require,module,exports) {
@@ -2201,68 +2453,7 @@ function returnStrings(den, num, integer, type) {
     else return `${type}${integer} ${num}/${den}`; //If there's an integer and a fraction return both.
 }
 
-},{}],"5cUXS":[function(require,module,exports) {
-var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
-parcelHelpers.defineInteropFlag(exports);
-var _iconsSvg = require("url:../../img/icons.svg");
-var _iconsSvgDefault = parcelHelpers.interopDefault(_iconsSvg);
-var _fracty = require("fracty");
-var _fractyDefault = parcelHelpers.interopDefault(_fracty);
-class View {
-    _data;
-    render(data) {
-        console.log(data);
-        if (!data || Array.isArray(data) && data.length === 0) return this.renderError();
-        this._data = data;
-        const markup = this._generateMarkup();
-        this._clear();
-        this._parentElement.insertAdjacentHTML("afterbegin", markup);
-    }
-    _clear() {
-        this._parentElement.innerHTML = "";
-    }
-    // Add spinner when recipe picture is loading
-    renderSpinner() {
-        const markup = `  
-    <div class="spinner">
-    <svg>
-      <use href="${(0, _iconsSvgDefault.default)}#icon-loader"></use>
-    </svg>
-  </div>
-    `;
-        this._clear();
-        this._parentElement.insertAdjacentHTML("afterbegin", markup);
-    }
-    renderError(message = this._errorMessage) {
-        const markup = `
-    <div class="error">
-    <div>
-      <svg>
-        <use href="${(0, _iconsSvgDefault.default)}#icon-alert-triangle"></use>
-      </svg>
-    </div>
-    <p>${message}</p>
-  </div>`;
-        this._clear();
-        this._parentElement.insertAdjacentHTML("afterbegin", markup);
-    }
-    renderMessage(message = this._message) {
-        const markup = `
-    <div class="message">
-    <div>
-      <svg>
-        <use href="${(0, _iconsSvgDefault.default)}#icon-smile"></use>
-      </svg>
-    </div>
-    <p>${message}</p>
-  </div>`;
-        this._clear();
-        this._parentElement.insertAdjacentHTML("afterbegin", markup);
-    }
-}
-exports.default = View;
-
-},{"@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","url:../../img/icons.svg":"loVOp","fracty":"hJO4d"}],"9OQAM":[function(require,module,exports) {
+},{}],"9OQAM":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 class SearchView {
@@ -2289,6 +2480,8 @@ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 var _view = require("./View");
 var _viewDefault = parcelHelpers.interopDefault(_view);
+var _previewView = require("./previewView");
+var _previewViewDefault = parcelHelpers.interopDefault(_previewView);
 var _iconsSvg = require("url:../../img/icons.svg");
 var _iconsSvgDefault = parcelHelpers.interopDefault(_iconsSvg);
 class ResultsView extends (0, _viewDefault.default) {
@@ -2296,19 +2489,31 @@ class ResultsView extends (0, _viewDefault.default) {
     _errorMessage = "No recipe found for your query! Please try again";
     _message = "";
     _generateMarkup() {
-        console.log(this._data);
-        return this._data.map((result)=>this._generateMarkupPreview(result)).join("");
+        return this._data.map((result)=>(0, _previewViewDefault.default).render(result, false)).join("");
     }
-    _generateMarkupPreview(result) {
+}
+exports.default = new ResultsView();
+
+},{"./View":"5cUXS","./previewView":"1FDQ6","url:../../img/icons.svg":"loVOp","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"1FDQ6":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+var _view = require("./View");
+var _viewDefault = parcelHelpers.interopDefault(_view);
+var _iconsSvg = require("url:../../img/icons.svg");
+var _iconsSvgDefault = parcelHelpers.interopDefault(_iconsSvg);
+class PreviewView extends (0, _viewDefault.default) {
+    _parentElement = "";
+    _generateMarkup() {
+        const id = window.location.hash.slice(1);
         return `
     <li class="preview">
-            <a class="preview__link" href="#${result.id}">
+            <a class="preview__link ${this._data.id === id ? "preview__link--active" : ""}" href="#${this._data.id}">
               <figure class="preview__fig">
-                <img src="${result.image}" alt=${result.title} />
+                <img src="${this._data.image}" alt=${this._data.title} />
               </figure>
               <div class="preview__data">
-                <h4 class="preview__title">${result.title}</h4>
-                <p class="preview__publisher">${result.publisher}</p>
+                <h4 class="preview__title">${this._data.title}</h4>
+                <p class="preview__publisher">${this._data.publisher}</p>
                 </div>
               </div>
             </a>
@@ -2316,9 +2521,31 @@ class ResultsView extends (0, _viewDefault.default) {
     `;
     }
 }
-exports.default = new ResultsView();
+exports.default = new PreviewView();
 
-},{"./View":"5cUXS","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","url:../../img/icons.svg":"loVOp"}],"6z7bi":[function(require,module,exports) {
+},{"./View":"5cUXS","url:../../img/icons.svg":"loVOp","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"4Lqzq":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+var _view = require("./View");
+var _viewDefault = parcelHelpers.interopDefault(_view);
+var _iconsSvg = require("url:../../img/icons.svg");
+var _iconsSvgDefault = parcelHelpers.interopDefault(_iconsSvg);
+var _previewView = require("./previewView");
+var _previewViewDefault = parcelHelpers.interopDefault(_previewView);
+class BookmarksView extends (0, _viewDefault.default) {
+    _parentElement = document.querySelector(".bookmarks__list");
+    _errorMessage = "No bookmarks yet. Find a nice recipe and bookmark it.";
+    _message = "";
+    addHandlerRender(handler) {
+        window.addEventListener("load", handler);
+    }
+    _generateMarkup() {
+        return this._data.map((bookmark)=>(0, _previewViewDefault.default).render(bookmark, false)).join("");
+    }
+}
+exports.default = new BookmarksView();
+
+},{"./View":"5cUXS","url:../../img/icons.svg":"loVOp","./previewView":"1FDQ6","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"6z7bi":[function(require,module,exports) {
 var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
 parcelHelpers.defineInteropFlag(exports);
 var _view = require("./View");
@@ -2379,6 +2606,694 @@ class PaginationView extends (0, _viewDefault.default) {
 }
 exports.default = new PaginationView();
 
-},{"./View":"5cUXS","url:../../img/icons.svg":"loVOp","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}]},["fA0o9","aenu9"], "aenu9", "parcelRequire3a11")
+},{"./View":"5cUXS","url:../../img/icons.svg":"loVOp","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3"}],"i6DNj":[function(require,module,exports) {
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+var _view = require("./View");
+var _viewDefault = parcelHelpers.interopDefault(_view);
+var _iconsSvg = require("url:../../img/icons.svg");
+var _iconsSvgDefault = parcelHelpers.interopDefault(_iconsSvg);
+var _regeneratorRuntime = require("regenerator-runtime");
+class AddRecipeView extends (0, _viewDefault.default) {
+    _parentElement = document.querySelector(".upload");
+    _message = "Recipe was successfully added!";
+    _window = document.querySelector(".add-recipe-window");
+    _overlay = document.querySelector(".overlay");
+    _btnOpen = document.querySelector(".nav__btn--add-recipe");
+    _btnClose = document.querySelector(".btn--close-modal");
+    constructor(){
+        super();
+        this._addHandlerShowWindow();
+        this._addHandlerCloseWindow();
+    }
+    toggleWindow() {
+        this._overlay.classList.toggle("hidden");
+        this._window.classList.toggle("hidden");
+    }
+    _addHandlerShowWindow() {
+        this._btnOpen.addEventListener("click", this.toggleWindow.bind(this));
+    }
+    _addHandlerCloseWindow() {
+        this._btnClose.addEventListener("click", this.toggleWindow.bind(this));
+        this._overlay.addEventListener("click", this.toggleWindow.bind(this));
+    }
+    addHandlerUpload(handler) {
+        this._parentElement.addEventListener("submit", function(e) {
+            e.preventDefault();
+            const dataArr = [
+                ...new FormData(this)
+            ];
+            const data = Object.fromEntries(dataArr);
+            handler(data);
+        });
+    }
+    generateMarkup() {
+        const markup = `
+<div class="add-recipe-window hidden">
+<button class="btn--close-modal">&times;</button>
+<form class="upload">
+  <div class="upload__column">
+    <h3 class="upload__heading">Recipe data</h3>
+    <label>Title</label>
+    <input value="TEST13" required name="title" type="text" />
+    <label>URL</label>
+    <input value="TEST13" required name="sourceUrl" type="text" />
+    <label>Image URL</label>
+    <input value="TEST13" required name="image" type="text" />
+    <label>Publisher</label>
+    <input value="TEST13" required name="publisher" type="text" />
+    <label>Prep time</label>
+    <input value="23" required name="cookingTime" type="number" />
+    <label>Servings</label>
+    <input value="23" required name="servings" type="number" />
+  </div>
+
+  <div class="upload__column">
+    <h3 class="upload__heading">Ingredients</h3>
+    <label>Ingredient 1</label>
+    <input
+      value="0.5,kg,Rice"
+      type="text"
+      required
+      name="ingredient-1"
+      placeholder="Format: 'Quantity,Unit,Description'"
+    />
+    <label>Ingredient 2</label>
+    <input
+      value="1,,Avocado"
+      type="text"
+      name="ingredient-2"
+      placeholder="Format: 'Quantity,Unit,Description'"
+    />
+    <label>Ingredient 3</label>
+    <input
+      value=",,salt"
+      type="text"
+      name="ingredient-3"
+      placeholder="Format: 'Quantity,Unit,Description'"
+    />
+    <label>Ingredient 4</label>
+    <input
+      type="text"
+      name="ingredient-4"
+      placeholder="Format: 'Quantity,Unit,Description'"
+    />
+    <label>Ingredient 5</label>
+    <input
+      type="text"
+      name="ingredient-5"
+      placeholder="Format: 'Quantity,Unit,Description'"
+    />
+    <label>Ingredient 6</label>
+    <input
+      type="text"
+      name="ingredient-6"
+      placeholder="Format: 'Quantity,Unit,Description'"
+    />
+  </div>
+
+  <button class="btn upload__btn">
+    <svg>
+      <use href="src/img/icons.svg#icon-upload-cloud"></use>
+    </svg>
+    <span>Upload</span>
+  </button>
+</form>
+</div>
+`;
+        this.clear();
+        this._parentElement.insertAdjacentHTML("afterbegin", markup);
+    }
+}
+exports.default = new AddRecipeView();
+
+},{"./View":"5cUXS","url:../../img/icons.svg":"loVOp","@parcel/transformer-js/src/esmodule-helpers.js":"gkKU3","regenerator-runtime":"dXNgZ"}],"dXNgZ":[function(require,module,exports) {
+/**
+ * Copyright (c) 2014-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */ var runtime = function(exports) {
+    "use strict";
+    var Op = Object.prototype;
+    var hasOwn = Op.hasOwnProperty;
+    var undefined; // More compressible than void 0.
+    var $Symbol = typeof Symbol === "function" ? Symbol : {};
+    var iteratorSymbol = $Symbol.iterator || "@@iterator";
+    var asyncIteratorSymbol = $Symbol.asyncIterator || "@@asyncIterator";
+    var toStringTagSymbol = $Symbol.toStringTag || "@@toStringTag";
+    function define(obj, key, value) {
+        Object.defineProperty(obj, key, {
+            value: value,
+            enumerable: true,
+            configurable: true,
+            writable: true
+        });
+        return obj[key];
+    }
+    try {
+        // IE 8 has a broken Object.defineProperty that only works on DOM objects.
+        define({}, "");
+    } catch (err1) {
+        define = function(obj, key, value) {
+            return obj[key] = value;
+        };
+    }
+    function wrap(innerFn, outerFn, self, tryLocsList) {
+        // If outerFn provided and outerFn.prototype is a Generator, then outerFn.prototype instanceof Generator.
+        var protoGenerator = outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator;
+        var generator = Object.create(protoGenerator.prototype);
+        var context = new Context(tryLocsList || []);
+        // The ._invoke method unifies the implementations of the .next,
+        // .throw, and .return methods.
+        generator._invoke = makeInvokeMethod(innerFn, self, context);
+        return generator;
+    }
+    exports.wrap = wrap;
+    // Try/catch helper to minimize deoptimizations. Returns a completion
+    // record like context.tryEntries[i].completion. This interface could
+    // have been (and was previously) designed to take a closure to be
+    // invoked without arguments, but in all the cases we care about we
+    // already have an existing method we want to call, so there's no need
+    // to create a new function object. We can even get away with assuming
+    // the method takes exactly one argument, since that happens to be true
+    // in every case, so we don't have to touch the arguments object. The
+    // only additional allocation required is the completion record, which
+    // has a stable shape and so hopefully should be cheap to allocate.
+    function tryCatch(fn, obj, arg) {
+        try {
+            return {
+                type: "normal",
+                arg: fn.call(obj, arg)
+            };
+        } catch (err) {
+            return {
+                type: "throw",
+                arg: err
+            };
+        }
+    }
+    var GenStateSuspendedStart = "suspendedStart";
+    var GenStateSuspendedYield = "suspendedYield";
+    var GenStateExecuting = "executing";
+    var GenStateCompleted = "completed";
+    // Returning this object from the innerFn has the same effect as
+    // breaking out of the dispatch switch statement.
+    var ContinueSentinel = {};
+    // Dummy constructor functions that we use as the .constructor and
+    // .constructor.prototype properties for functions that return Generator
+    // objects. For full spec compliance, you may wish to configure your
+    // minifier not to mangle the names of these two functions.
+    function Generator() {}
+    function GeneratorFunction() {}
+    function GeneratorFunctionPrototype() {}
+    // This is a polyfill for %IteratorPrototype% for environments that
+    // don't natively support it.
+    var IteratorPrototype = {};
+    define(IteratorPrototype, iteratorSymbol, function() {
+        return this;
+    });
+    var getProto = Object.getPrototypeOf;
+    var NativeIteratorPrototype = getProto && getProto(getProto(values([])));
+    if (NativeIteratorPrototype && NativeIteratorPrototype !== Op && hasOwn.call(NativeIteratorPrototype, iteratorSymbol)) // This environment has a native %IteratorPrototype%; use it instead
+    // of the polyfill.
+    IteratorPrototype = NativeIteratorPrototype;
+    var Gp = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(IteratorPrototype);
+    GeneratorFunction.prototype = GeneratorFunctionPrototype;
+    define(Gp, "constructor", GeneratorFunctionPrototype);
+    define(GeneratorFunctionPrototype, "constructor", GeneratorFunction);
+    GeneratorFunction.displayName = define(GeneratorFunctionPrototype, toStringTagSymbol, "GeneratorFunction");
+    // Helper for defining the .next, .throw, and .return methods of the
+    // Iterator interface in terms of a single ._invoke method.
+    function defineIteratorMethods(prototype) {
+        [
+            "next",
+            "throw",
+            "return"
+        ].forEach(function(method) {
+            define(prototype, method, function(arg) {
+                return this._invoke(method, arg);
+            });
+        });
+    }
+    exports.isGeneratorFunction = function(genFun) {
+        var ctor = typeof genFun === "function" && genFun.constructor;
+        return ctor ? ctor === GeneratorFunction || // For the native GeneratorFunction constructor, the best we can
+        // do is to check its .name property.
+        (ctor.displayName || ctor.name) === "GeneratorFunction" : false;
+    };
+    exports.mark = function(genFun) {
+        if (Object.setPrototypeOf) Object.setPrototypeOf(genFun, GeneratorFunctionPrototype);
+        else {
+            genFun.__proto__ = GeneratorFunctionPrototype;
+            define(genFun, toStringTagSymbol, "GeneratorFunction");
+        }
+        genFun.prototype = Object.create(Gp);
+        return genFun;
+    };
+    // Within the body of any async function, `await x` is transformed to
+    // `yield regeneratorRuntime.awrap(x)`, so that the runtime can test
+    // `hasOwn.call(value, "__await")` to determine if the yielded value is
+    // meant to be awaited.
+    exports.awrap = function(arg) {
+        return {
+            __await: arg
+        };
+    };
+    function AsyncIterator(generator, PromiseImpl) {
+        function invoke(method, arg, resolve, reject) {
+            var record = tryCatch(generator[method], generator, arg);
+            if (record.type === "throw") reject(record.arg);
+            else {
+                var result = record.arg;
+                var value1 = result.value;
+                if (value1 && typeof value1 === "object" && hasOwn.call(value1, "__await")) return PromiseImpl.resolve(value1.__await).then(function(value) {
+                    invoke("next", value, resolve, reject);
+                }, function(err) {
+                    invoke("throw", err, resolve, reject);
+                });
+                return PromiseImpl.resolve(value1).then(function(unwrapped) {
+                    // When a yielded Promise is resolved, its final value becomes
+                    // the .value of the Promise<{value,done}> result for the
+                    // current iteration.
+                    result.value = unwrapped;
+                    resolve(result);
+                }, function(error) {
+                    // If a rejected Promise was yielded, throw the rejection back
+                    // into the async generator function so it can be handled there.
+                    return invoke("throw", error, resolve, reject);
+                });
+            }
+        }
+        var previousPromise;
+        function enqueue(method, arg) {
+            function callInvokeWithMethodAndArg() {
+                return new PromiseImpl(function(resolve, reject) {
+                    invoke(method, arg, resolve, reject);
+                });
+            }
+            return previousPromise = // If enqueue has been called before, then we want to wait until
+            // all previous Promises have been resolved before calling invoke,
+            // so that results are always delivered in the correct order. If
+            // enqueue has not been called before, then it is important to
+            // call invoke immediately, without waiting on a callback to fire,
+            // so that the async generator function has the opportunity to do
+            // any necessary setup in a predictable way. This predictability
+            // is why the Promise constructor synchronously invokes its
+            // executor callback, and why async functions synchronously
+            // execute code before the first await. Since we implement simple
+            // async functions in terms of async generators, it is especially
+            // important to get this right, even though it requires care.
+            previousPromise ? previousPromise.then(callInvokeWithMethodAndArg, // Avoid propagating failures to Promises returned by later
+            // invocations of the iterator.
+            callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg();
+        }
+        // Define the unified helper method that is used to implement .next,
+        // .throw, and .return (see defineIteratorMethods).
+        this._invoke = enqueue;
+    }
+    defineIteratorMethods(AsyncIterator.prototype);
+    define(AsyncIterator.prototype, asyncIteratorSymbol, function() {
+        return this;
+    });
+    exports.AsyncIterator = AsyncIterator;
+    // Note that simple async functions are implemented on top of
+    // AsyncIterator objects; they just return a Promise for the value of
+    // the final result produced by the iterator.
+    exports.async = function(innerFn, outerFn, self, tryLocsList, PromiseImpl) {
+        if (PromiseImpl === void 0) PromiseImpl = Promise;
+        var iter = new AsyncIterator(wrap(innerFn, outerFn, self, tryLocsList), PromiseImpl);
+        return exports.isGeneratorFunction(outerFn) ? iter // If outerFn is a generator, return the full iterator.
+         : iter.next().then(function(result) {
+            return result.done ? result.value : iter.next();
+        });
+    };
+    function makeInvokeMethod(innerFn, self, context) {
+        var state = GenStateSuspendedStart;
+        return function invoke(method, arg) {
+            if (state === GenStateExecuting) throw new Error("Generator is already running");
+            if (state === GenStateCompleted) {
+                if (method === "throw") throw arg;
+                // Be forgiving, per 25.3.3.3.3 of the spec:
+                // https://people.mozilla.org/~jorendorff/es6-draft.html#sec-generatorresume
+                return doneResult();
+            }
+            context.method = method;
+            context.arg = arg;
+            while(true){
+                var delegate = context.delegate;
+                if (delegate) {
+                    var delegateResult = maybeInvokeDelegate(delegate, context);
+                    if (delegateResult) {
+                        if (delegateResult === ContinueSentinel) continue;
+                        return delegateResult;
+                    }
+                }
+                if (context.method === "next") // Setting context._sent for legacy support of Babel's
+                // function.sent implementation.
+                context.sent = context._sent = context.arg;
+                else if (context.method === "throw") {
+                    if (state === GenStateSuspendedStart) {
+                        state = GenStateCompleted;
+                        throw context.arg;
+                    }
+                    context.dispatchException(context.arg);
+                } else if (context.method === "return") context.abrupt("return", context.arg);
+                state = GenStateExecuting;
+                var record = tryCatch(innerFn, self, context);
+                if (record.type === "normal") {
+                    // If an exception is thrown from innerFn, we leave state ===
+                    // GenStateExecuting and loop back for another invocation.
+                    state = context.done ? GenStateCompleted : GenStateSuspendedYield;
+                    if (record.arg === ContinueSentinel) continue;
+                    return {
+                        value: record.arg,
+                        done: context.done
+                    };
+                } else if (record.type === "throw") {
+                    state = GenStateCompleted;
+                    // Dispatch the exception by looping back around to the
+                    // context.dispatchException(context.arg) call above.
+                    context.method = "throw";
+                    context.arg = record.arg;
+                }
+            }
+        };
+    }
+    // Call delegate.iterator[context.method](context.arg) and handle the
+    // result, either by returning a { value, done } result from the
+    // delegate iterator, or by modifying context.method and context.arg,
+    // setting context.delegate to null, and returning the ContinueSentinel.
+    function maybeInvokeDelegate(delegate, context) {
+        var method = delegate.iterator[context.method];
+        if (method === undefined) {
+            // A .throw or .return when the delegate iterator has no .throw
+            // method always terminates the yield* loop.
+            context.delegate = null;
+            if (context.method === "throw") {
+                // Note: ["return"] must be used for ES3 parsing compatibility.
+                if (delegate.iterator["return"]) {
+                    // If the delegate iterator has a return method, give it a
+                    // chance to clean up.
+                    context.method = "return";
+                    context.arg = undefined;
+                    maybeInvokeDelegate(delegate, context);
+                    if (context.method === "throw") // If maybeInvokeDelegate(context) changed context.method from
+                    // "return" to "throw", let that override the TypeError below.
+                    return ContinueSentinel;
+                }
+                context.method = "throw";
+                context.arg = new TypeError("The iterator does not provide a 'throw' method");
+            }
+            return ContinueSentinel;
+        }
+        var record = tryCatch(method, delegate.iterator, context.arg);
+        if (record.type === "throw") {
+            context.method = "throw";
+            context.arg = record.arg;
+            context.delegate = null;
+            return ContinueSentinel;
+        }
+        var info = record.arg;
+        if (!info) {
+            context.method = "throw";
+            context.arg = new TypeError("iterator result is not an object");
+            context.delegate = null;
+            return ContinueSentinel;
+        }
+        if (info.done) {
+            // Assign the result of the finished delegate to the temporary
+            // variable specified by delegate.resultName (see delegateYield).
+            context[delegate.resultName] = info.value;
+            // Resume execution at the desired location (see delegateYield).
+            context.next = delegate.nextLoc;
+            // If context.method was "throw" but the delegate handled the
+            // exception, let the outer generator proceed normally. If
+            // context.method was "next", forget context.arg since it has been
+            // "consumed" by the delegate iterator. If context.method was
+            // "return", allow the original .return call to continue in the
+            // outer generator.
+            if (context.method !== "return") {
+                context.method = "next";
+                context.arg = undefined;
+            }
+        } else // Re-yield the result returned by the delegate method.
+        return info;
+        // The delegate iterator is finished, so forget it and continue with
+        // the outer generator.
+        context.delegate = null;
+        return ContinueSentinel;
+    }
+    // Define Generator.prototype.{next,throw,return} in terms of the
+    // unified ._invoke helper method.
+    defineIteratorMethods(Gp);
+    define(Gp, toStringTagSymbol, "Generator");
+    // A Generator should always return itself as the iterator object when the
+    // @@iterator function is called on it. Some browsers' implementations of the
+    // iterator prototype chain incorrectly implement this, causing the Generator
+    // object to not be returned from this call. This ensures that doesn't happen.
+    // See https://github.com/facebook/regenerator/issues/274 for more details.
+    define(Gp, iteratorSymbol, function() {
+        return this;
+    });
+    define(Gp, "toString", function() {
+        return "[object Generator]";
+    });
+    function pushTryEntry(locs) {
+        var entry = {
+            tryLoc: locs[0]
+        };
+        if (1 in locs) entry.catchLoc = locs[1];
+        if (2 in locs) {
+            entry.finallyLoc = locs[2];
+            entry.afterLoc = locs[3];
+        }
+        this.tryEntries.push(entry);
+    }
+    function resetTryEntry(entry) {
+        var record = entry.completion || {};
+        record.type = "normal";
+        delete record.arg;
+        entry.completion = record;
+    }
+    function Context(tryLocsList) {
+        // The root entry object (effectively a try statement without a catch
+        // or a finally block) gives us a place to store values thrown from
+        // locations where there is no enclosing try statement.
+        this.tryEntries = [
+            {
+                tryLoc: "root"
+            }
+        ];
+        tryLocsList.forEach(pushTryEntry, this);
+        this.reset(true);
+    }
+    exports.keys = function(object) {
+        var keys = [];
+        for(var key1 in object)keys.push(key1);
+        keys.reverse();
+        // Rather than returning an object with a next method, we keep
+        // things simple and return the next function itself.
+        return function next() {
+            while(keys.length){
+                var key = keys.pop();
+                if (key in object) {
+                    next.value = key;
+                    next.done = false;
+                    return next;
+                }
+            }
+            // To avoid creating an additional object, we just hang the .value
+            // and .done properties off the next function object itself. This
+            // also ensures that the minifier will not anonymize the function.
+            next.done = true;
+            return next;
+        };
+    };
+    function values(iterable) {
+        if (iterable) {
+            var iteratorMethod = iterable[iteratorSymbol];
+            if (iteratorMethod) return iteratorMethod.call(iterable);
+            if (typeof iterable.next === "function") return iterable;
+            if (!isNaN(iterable.length)) {
+                var i = -1, next1 = function next() {
+                    while(++i < iterable.length)if (hasOwn.call(iterable, i)) {
+                        next.value = iterable[i];
+                        next.done = false;
+                        return next;
+                    }
+                    next.value = undefined;
+                    next.done = true;
+                    return next;
+                };
+                return next1.next = next1;
+            }
+        }
+        // Return an iterator with no values.
+        return {
+            next: doneResult
+        };
+    }
+    exports.values = values;
+    function doneResult() {
+        return {
+            value: undefined,
+            done: true
+        };
+    }
+    Context.prototype = {
+        constructor: Context,
+        reset: function(skipTempReset) {
+            this.prev = 0;
+            this.next = 0;
+            // Resetting context._sent for legacy support of Babel's
+            // function.sent implementation.
+            this.sent = this._sent = undefined;
+            this.done = false;
+            this.delegate = null;
+            this.method = "next";
+            this.arg = undefined;
+            this.tryEntries.forEach(resetTryEntry);
+            if (!skipTempReset) {
+                for(var name in this)// Not sure about the optimal order of these conditions:
+                if (name.charAt(0) === "t" && hasOwn.call(this, name) && !isNaN(+name.slice(1))) this[name] = undefined;
+            }
+        },
+        stop: function() {
+            this.done = true;
+            var rootEntry = this.tryEntries[0];
+            var rootRecord = rootEntry.completion;
+            if (rootRecord.type === "throw") throw rootRecord.arg;
+            return this.rval;
+        },
+        dispatchException: function(exception) {
+            if (this.done) throw exception;
+            var context = this;
+            function handle(loc, caught) {
+                record.type = "throw";
+                record.arg = exception;
+                context.next = loc;
+                if (caught) {
+                    // If the dispatched exception was caught by a catch block,
+                    // then let that catch block handle the exception normally.
+                    context.method = "next";
+                    context.arg = undefined;
+                }
+                return !!caught;
+            }
+            for(var i = this.tryEntries.length - 1; i >= 0; --i){
+                var entry = this.tryEntries[i];
+                var record = entry.completion;
+                if (entry.tryLoc === "root") // Exception thrown outside of any try block that could handle
+                // it, so set the completion value of the entire function to
+                // throw the exception.
+                return handle("end");
+                if (entry.tryLoc <= this.prev) {
+                    var hasCatch = hasOwn.call(entry, "catchLoc");
+                    var hasFinally = hasOwn.call(entry, "finallyLoc");
+                    if (hasCatch && hasFinally) {
+                        if (this.prev < entry.catchLoc) return handle(entry.catchLoc, true);
+                        else if (this.prev < entry.finallyLoc) return handle(entry.finallyLoc);
+                    } else if (hasCatch) {
+                        if (this.prev < entry.catchLoc) return handle(entry.catchLoc, true);
+                    } else if (hasFinally) {
+                        if (this.prev < entry.finallyLoc) return handle(entry.finallyLoc);
+                    } else throw new Error("try statement without catch or finally");
+                }
+            }
+        },
+        abrupt: function(type, arg) {
+            for(var i = this.tryEntries.length - 1; i >= 0; --i){
+                var entry = this.tryEntries[i];
+                if (entry.tryLoc <= this.prev && hasOwn.call(entry, "finallyLoc") && this.prev < entry.finallyLoc) {
+                    var finallyEntry = entry;
+                    break;
+                }
+            }
+            if (finallyEntry && (type === "break" || type === "continue") && finallyEntry.tryLoc <= arg && arg <= finallyEntry.finallyLoc) // Ignore the finally entry if control is not jumping to a
+            // location outside the try/catch block.
+            finallyEntry = null;
+            var record = finallyEntry ? finallyEntry.completion : {};
+            record.type = type;
+            record.arg = arg;
+            if (finallyEntry) {
+                this.method = "next";
+                this.next = finallyEntry.finallyLoc;
+                return ContinueSentinel;
+            }
+            return this.complete(record);
+        },
+        complete: function(record, afterLoc) {
+            if (record.type === "throw") throw record.arg;
+            if (record.type === "break" || record.type === "continue") this.next = record.arg;
+            else if (record.type === "return") {
+                this.rval = this.arg = record.arg;
+                this.method = "return";
+                this.next = "end";
+            } else if (record.type === "normal" && afterLoc) this.next = afterLoc;
+            return ContinueSentinel;
+        },
+        finish: function(finallyLoc) {
+            for(var i = this.tryEntries.length - 1; i >= 0; --i){
+                var entry = this.tryEntries[i];
+                if (entry.finallyLoc === finallyLoc) {
+                    this.complete(entry.completion, entry.afterLoc);
+                    resetTryEntry(entry);
+                    return ContinueSentinel;
+                }
+            }
+        },
+        "catch": function(tryLoc) {
+            for(var i = this.tryEntries.length - 1; i >= 0; --i){
+                var entry = this.tryEntries[i];
+                if (entry.tryLoc === tryLoc) {
+                    var record = entry.completion;
+                    if (record.type === "throw") {
+                        var thrown = record.arg;
+                        resetTryEntry(entry);
+                    }
+                    return thrown;
+                }
+            }
+            // The context.catch method must only be called with a location
+            // argument that corresponds to a known catch block.
+            throw new Error("illegal catch attempt");
+        },
+        delegateYield: function(iterable, resultName, nextLoc) {
+            this.delegate = {
+                iterator: values(iterable),
+                resultName: resultName,
+                nextLoc: nextLoc
+            };
+            if (this.method === "next") // Deliberately forget the last sent value so that we don't
+            // accidentally pass it on to the delegate.
+            this.arg = undefined;
+            return ContinueSentinel;
+        }
+    };
+    // Regardless of whether this script is executing as a CommonJS module
+    // or not, return the runtime object so that we can declare the variable
+    // regeneratorRuntime in the outer scope, which allows this module to be
+    // injected easily by `bin/regenerator --include-runtime script.js`.
+    return exports;
+}(module.exports);
+try {
+    regeneratorRuntime = runtime;
+} catch (accidentalStrictMode) {
+    // This module should not be running in strict mode, so the above
+    // assignment should always work unless something is misconfigured. Just
+    // in case runtime.js accidentally runs in strict mode, in modern engines
+    // we can explicitly access globalThis. In older engines we can escape
+    // strict mode using a global Function call. This could conceivably fail
+    // if a Content Security Policy forbids using Function, but in that case
+    // the proper solution is to fix the accidental strict mode problem. If
+    // you've misconfigured your bundler to force strict mode and applied a
+    // CSP to forbid Function, and you're not willing to fix either of those
+    // problems, please detail your unique predicament in a GitHub issue.
+    if (typeof globalThis === "object") globalThis.regeneratorRuntime = runtime;
+    else Function("r", "regeneratorRuntime = r")(runtime);
+}
+
+},{}]},["fA0o9","aenu9"], "aenu9", "parcelRequire3a11")
 
 //# sourceMappingURL=index.e37f48ea.js.map
