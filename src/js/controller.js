@@ -134,6 +134,11 @@ const controlAddRecipe = async function (newRecipe) {
   location.reload();
 };
 
+const newfeature = function () {
+  console.log('Welcome to the application');
+};
+newfeature();
+
 const init = function () {
   bookmarksView.addHandlerRender(controlBookmarks);
   recipeView.addHandlerRender(controlRecipes);
