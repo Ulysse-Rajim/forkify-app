@@ -550,7 +550,10 @@ var _paginationViewJsDefault = parcelHelpers.interopDefault(_paginationViewJs);
 var _addRecipeViewJs = require("./views/addRecipeView.js");
 var _addRecipeViewJsDefault = parcelHelpers.interopDefault(_addRecipeViewJs);
 var _configJs = require("./config.js");
-// if (module.hot) {
+/**
+ *
+ * @todo new features
+ */ // if (module.hot) {
 //   module.hot.accept();
 // }
 const controlRecipes = async function() {
@@ -1945,7 +1948,10 @@ const loadSearchResult = async function(query) {
                 id: recipe.id,
                 title: recipe.title,
                 publisher: recipe.publisher,
-                image: recipe.image_url
+                image: recipe.image_url,
+                ...recipe.key && {
+                    key: recipe.key
+                }
             };
         });
         state.search.page = 1;
@@ -1995,7 +2001,8 @@ const uploadRecipe = async function(newRecipe) {
     try {
         console.log(Object.entries(newRecipe));
         const ingredients = Object.entries(newRecipe).filter((entry)=>entry[0].startsWith("ingredient") && entry[1] !== "").map((ing)=>{
-            const ingArr = ing[1].replaceAll(" ", "").split(",");
+            const ingArr = ing[1].split(",").map((el)=>el.trim());
+            // const ingArr = ing[1].replaceAll(' ', '').split(',');
             if (ingArr.length !== 3) throw new Error("Wrong ingredient format! Please use the correct format :)");
             const [quantity, unit, description] = ingArr;
             return {
@@ -2188,8 +2195,11 @@ class RecipeView extends (0, _viewDefault.default) {
       </div>
     </div>
   
-    <div class="recipe__user-generated">
-    </div>
+    <div class="preview__user-generated ${this._data.key ? "" : "hidden"}">
+    <svg>
+      <use href="${0, _iconsSvgDefault.default}#icon-user"></use>
+    </svg>
+  </div>
     <button class="btn--round btn--bookmark" >
       <svg class="">
         <use href="${0, _iconsSvgDefault.default}#icon-bookmark${this._data.bookmarked ? "-fill" : ""}"></use>
@@ -2511,9 +2521,13 @@ class PreviewView extends (0, _viewDefault.default) {
               <figure class="preview__fig">
                 <img src="${this._data.image}" alt=${this._data.title} />
               </figure>
-              <div class="preview__data">
-                <h4 class="preview__title">${this._data.title}</h4>
-                <p class="preview__publisher">${this._data.publisher}</p>
+                <div class="preview__data">
+                  <h4 class="preview__title">${this._data.title}</h4>
+                  <p class="preview__publisher">${this._data.publisher}</p>
+                <div class="preview__user-generated ${this._data.key ? "" : "hidden"}">
+                  <svg>
+                  <use href="${0, _iconsSvgDefault.default}#icon-user"></use>
+                  </svg>
                 </div>
               </div>
             </a>
@@ -2647,7 +2661,7 @@ class AddRecipeView extends (0, _viewDefault.default) {
             handler(data);
         });
     }
-    generateMarkup() {
+    _generateMarkup() {
         const markup = `
 <div class="add-recipe-window hidden">
 <button class="btn--close-modal">&times;</button>

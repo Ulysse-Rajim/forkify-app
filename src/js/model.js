@@ -57,6 +57,7 @@ export const loadSearchResult = async function (query) {
         title: recipe.title,
         publisher: recipe.publisher,
         image: recipe.image_url,
+        ...(recipe.key && { key: recipe.key }),
       };
     });
     state.search.page = 1;
@@ -116,13 +117,18 @@ const clearBookmarks = function () {
 };
 // clearBookmarks();
 
+/**
+ *
+ * @param {Object} newRecipe
+ */
 export const uploadRecipe = async function (newRecipe) {
   try {
     console.log(Object.entries(newRecipe));
     const ingredients = Object.entries(newRecipe)
       .filter(entry => entry[0].startsWith('ingredient') && entry[1] !== '')
       .map(ing => {
-        const ingArr = ing[1].replaceAll(' ', '').split(',');
+        const ingArr = ing[1].split(',').map(el => el.trim());
+        // const ingArr = ing[1].replaceAll(' ', '').split(',');
         if (ingArr.length !== 3)
           throw new Error(
             'Wrong ingredient format! Please use the correct format :)'

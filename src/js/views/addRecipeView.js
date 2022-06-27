@@ -40,7 +40,7 @@ class AddRecipeView extends View {
     });
   }
 
-  generateMarkup() {
+  _generateMarkup() {
     const markup = `
 <div class="add-recipe-window hidden">
 <button class="btn--close-modal">&times;</button>

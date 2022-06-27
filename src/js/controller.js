@@ -9,6 +9,11 @@ import paginationView from './views/paginationView.js';
 import addRecipeView from './views/addRecipeView.js';
 import { MODAL_CLOSE_SEC } from './config.js';
 
+/**
+ *
+ * @todo new features
+ */
+
 // if (module.hot) {
 //   module.hot.accept();
 // }
